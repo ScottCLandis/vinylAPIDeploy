@@ -23,17 +23,37 @@ router.post('/addToCollection', (req, res) => {
     req.body.album_name,
     req.body.album_art,
     ];
-    console.log(album)
 
-    dbConn.query("INSERT INTO collection (artist, album_name, album_art) VALUES ( ? )", [album],
+    var dup = {
+      dupResponse: 'duplicate'
+    }
+  dbConn.query("INSERT INTO collection (artist, album_name, album_art) VALUES ( ? )", [album],
   function (error, results) {
-      if (error) throw error;
-      console.log(results)
+    console.log("error test", error)
+
+    if (error){
+      if (error.errno === 1062){
+        console.log('dupe')
+        return res.send({
+         
+          data: 'dupe'
+         
+        })
+      }  
+      else{
+        return res.send({
+          data: error.code
+        })
+      }
+    }
+    else{
+     
       return res.send({
           error: false,
           data: results,
           message: 'New records has been created successfully.'
       });
+    }
   });
 
 });
