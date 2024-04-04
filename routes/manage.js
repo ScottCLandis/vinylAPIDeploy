@@ -22,13 +22,17 @@ router.post('/addToCollection', (req, res) => {
     req.body.artist,
     req.body.album_name,
     req.body.album_art,
-    req.body.category
+    req.body.category,
+    req.body.mbid,
+    req.body.color,
+    req.body.size,
+    req.body.notes
     ];
 
     var dup = {
-      dupResponse: 'duplicate'
+      dupResponse: 'duplicate'  
     }
-  dbConn.query("INSERT INTO collection (artist, album_name, album_art, category) VALUES ( ? )", [album],
+  dbConn.query("INSERT INTO collection (artist, album_name, album_art, category, mbid, color, size, notes) VALUES ( ? )", [album],
   function (error, results) {
     console.log("error test", error)
 
