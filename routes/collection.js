@@ -29,4 +29,31 @@ router.get('/fullCollection', function (req, res) {
  
  });
 
-module.exports = router;
+
+router.get('/owned', function (req, res) {
+  dbConn.query("SELECT * FROM collection WHERE category = 'owned'", function (error, results, fields) {
+    
+       if (error) throw error;
+       return res.send({
+           error: false,
+           data: results,
+           message: 'draftOrder'
+       });
+   });
+ 
+ });
+
+ router.get('/wishlist', function (req, res) {
+  dbConn.query("SELECT * FROM collection WHERE category = 'wanted' OR category = 'ordered'", function (error, results, fields) {
+    
+       if (error) throw error;
+       return res.send({
+           error: false,
+           data: results,
+           message: 'draftOrder'
+       });
+   });
+ 
+ });
+
+module.exports = router;   
