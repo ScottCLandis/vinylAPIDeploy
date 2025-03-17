@@ -16,6 +16,7 @@
     "pg": "^8.5.1"
   },
   "devDependencies": {
+    "@angular-devkit/build-angular": "^17.3.3",
     "@architect/sandbox": "^3.3.7"
   }
 }
