@@ -11,7 +11,7 @@ var dbConn = mysql.createConnection({
     password: "Gordan24",
     database: "vinyl_collection"
 });
-/* GET users listing. */
+
 router.get('/', function(req, res, next) {
   res.send('respond with a resource');
 });
@@ -23,7 +23,7 @@ router.get('/fullCollection', function (req, res) {
        return res.send({
            error: false,
            data: results,
-           message: 'draftOrder'
+           message: 'Full Collection'
        });
    });
  
@@ -37,7 +37,7 @@ router.get('/owned', function (req, res) {
        return res.send({
            error: false,
            data: results,
-           message: 'draftOrder'
+           message: 'Owned Record'
        });
    });
  
@@ -50,10 +50,23 @@ router.get('/owned', function (req, res) {
        return res.send({
            error: false,
            data: results,
-           message: 'draftOrder'
+           message: 'Wanted Records'
        });
-   });
- 
+  }); 
  });
+router.get('/albumDetails', function (req, res) {
+  const itemId = parseInt(req.query.id);
+  console.log(itemId);
+  
+  dbConn.query('SELECT * FROM collection WHERE id = ?', [itemId], function (error, results) {
+    console.log(results);
+    if (error) throw error;
+    return res.send({
+      error: false,
+      data: results,
+      message: 'Requested Record'
+    });
+  });
+});
 
 module.exports = router;   
