@@ -19,7 +19,7 @@ router.post("/", function (req, res, next) {
 router.post("/addToCollection", (req, res) => {
   var album = [
     req.body.artist,
-    req.body.album_name,
+    req.body.album,
     req.body.album_art,
     req.body.category,
     req.body.mbid,
@@ -35,7 +35,7 @@ router.post("/addToCollection", (req, res) => {
     dupResponse: "duplicate",
   };
   dbConn.query(
-    "INSERT INTO collection (artist, album_name, album_art, category, mbid, color, size, notes, custom_img, genre, releaseDate) VALUES ( ? )",
+    "INSERT INTO collection (artist, album, album_art, category, mbid, color, size, notes, custom_img, genre, releaseDate) VALUES ( ? )",
     [album],
     function (error, results) {
       console.log("error test", error);
