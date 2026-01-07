@@ -15,8 +15,7 @@
     "morgan": "~1.9.1",
     "mysql": "^2.18.1",
     "ng2-search-filter": "^0.5.1",
-    "pg": "^8.5.1",
-    "uuid": "^13.0.0"
+    "pg": "^8.5.1"
   },
   "devDependencies": {
     "@angular-devkit/build-angular": "^17.3.3",

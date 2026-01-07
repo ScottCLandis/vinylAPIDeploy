@@ -3,19 +3,17 @@ var router = express.Router();
 
 const { PutObjectCommand } = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
-const { v4: uuidv4 } = require("uuid");
+const crypto = require("crypto");
 const { r2 } = require("../r2Client");
 
 // ---- CONFIG ----
-// 5 MB max (tweak as you like)
-const MAX_BYTES = 5 * 1024 * 1024;
+const MAX_BYTES = 5 * 1024 * 1024; // 5MB
 
 function isValidImageContentType(value) {
   return typeof value === "string" && value.startsWith("image/");
 }
 
 function normalizeExtFromContentType(contentType) {
-  // reasonable defaults
   if (typeof contentType !== "string") return "jpg";
   const ct = contentType.toLowerCase();
   if (ct.includes("png")) return "png";
@@ -28,12 +26,12 @@ router.post("/sign-upload", async function (req, res) {
   try {
     const { contentType, ext, fileSize } = req.body || {};
 
-    // --- Validate content type ---
+    // --- Content type ---
     const safeContentType = isValidImageContentType(contentType)
       ? contentType
       : "image/jpeg";
 
-    // --- Validate file size (client must send it) ---
+    // --- File size gate (client-provided) ---
     const sizeNum =
       typeof fileSize === "number"
         ? fileSize
@@ -55,16 +53,16 @@ router.post("/sign-upload", async function (req, res) {
       });
     }
 
-    // --- Validate/normalize extension ---
+    // --- Extension ---
     const safeExt =
       typeof ext === "string" && /^[a-z0-9]+$/i.test(ext)
         ? ext.toLowerCase()
         : normalizeExtFromContentType(safeContentType);
 
-    // --- Generate object key ---
-    const key = `covers/${uuidv4()}.${safeExt}`;
+    // --- Key ---
+    const id = crypto.randomUUID(); // ✅ no uuid package needed
+    const key = `covers/${id}.${safeExt}`;
 
-    // --- Create signed PUT command ---
     const command = new PutObjectCommand({
       Bucket: process.env.R2_BUCKET,
       Key: key,
@@ -72,9 +70,7 @@ router.post("/sign-upload", async function (req, res) {
       CacheControl: "public, max-age=31536000, immutable",
     });
 
-    const uploadUrl = await getSignedUrl(r2, command, {
-      expiresIn: 60, // seconds
-    });
+    const uploadUrl = await getSignedUrl(r2, command, { expiresIn: 60 });
 
     const base = String(process.env.R2_PUBLIC_BASE_URL || "").replace(
       /\/$/,
@@ -86,12 +82,7 @@ router.post("/sign-upload", async function (req, res) {
 
     const publicUrl = `${base}/${key}`;
 
-    return res.json({
-      key,
-      uploadUrl,
-      publicUrl,
-      maxBytes: MAX_BYTES,
-    });
+    return res.json({ key, uploadUrl, publicUrl, maxBytes: MAX_BYTES });
   } catch (err) {
     console.error("❌ R2 sign-upload error:", err);
     return res
