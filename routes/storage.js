@@ -6,20 +6,65 @@ const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 const { v4: uuidv4 } = require("uuid");
 const { r2 } = require("../r2Client");
 
-router.post("/sign-uploads", async function (req, res) {
+// ---- CONFIG ----
+// 5 MB max (tweak as you like)
+const MAX_BYTES = 5 * 1024 * 1024;
+
+function isValidImageContentType(value) {
+  return typeof value === "string" && value.startsWith("image/");
+}
+
+function normalizeExtFromContentType(contentType) {
+  // reasonable defaults
+  if (typeof contentType !== "string") return "jpg";
+  const ct = contentType.toLowerCase();
+  if (ct.includes("png")) return "png";
+  if (ct.includes("webp")) return "webp";
+  if (ct.includes("heic") || ct.includes("heif")) return "heic";
+  return "jpg";
+}
+
+router.post("/sign-upload", async function (req, res) {
   try {
-    const { contentType, ext } = req.body || {};
+    const { contentType, ext, fileSize } = req.body || {};
 
-    const safeContentType =
-      typeof contentType === "string" && contentType.startsWith("image/")
-        ? contentType
-        : "image/jpeg";
+    // --- Validate content type ---
+    const safeContentType = isValidImageContentType(contentType)
+      ? contentType
+      : "image/jpeg";
 
+    // --- Validate file size (client must send it) ---
+    const sizeNum =
+      typeof fileSize === "number"
+        ? fileSize
+        : typeof fileSize === "string"
+        ? Number(fileSize)
+        : NaN;
+
+    if (!Number.isFinite(sizeNum) || sizeNum <= 0) {
+      return res.status(400).json({
+        error:
+          "Missing or invalid fileSize. Provide fileSize in bytes when requesting a signed upload URL.",
+      });
+    }
+
+    if (sizeNum > MAX_BYTES) {
+      return res.status(413).json({
+        error: `File too large. Max allowed is ${MAX_BYTES} bytes.`,
+        maxBytes: MAX_BYTES,
+      });
+    }
+
+    // --- Validate/normalize extension ---
     const safeExt =
-      typeof ext === "string" && /^[a-z0-9]+$/i.test(ext) ? ext : "jpg";
+      typeof ext === "string" && /^[a-z0-9]+$/i.test(ext)
+        ? ext.toLowerCase()
+        : normalizeExtFromContentType(safeContentType);
 
+    // --- Generate object key ---
     const key = `covers/${uuidv4()}.${safeExt}`;
 
+    // --- Create signed PUT command ---
     const command = new PutObjectCommand({
       Bucket: process.env.R2_BUCKET,
       Key: key,
@@ -27,15 +72,31 @@ router.post("/sign-uploads", async function (req, res) {
       CacheControl: "public, max-age=31536000, immutable",
     });
 
-    const uploadUrl = await getSignedUrl(r2, command, { expiresIn: 60 });
+    const uploadUrl = await getSignedUrl(r2, command, {
+      expiresIn: 60, // seconds
+    });
 
-    const base = process.env.R2_PUBLIC_BASE_URL.replace(/\/$/, "");
+    const base = String(process.env.R2_PUBLIC_BASE_URL || "").replace(
+      /\/$/,
+      ""
+    );
+    if (!base) {
+      return res.status(500).json({ error: "R2_PUBLIC_BASE_URL is not set" });
+    }
+
     const publicUrl = `${base}/${key}`;
 
-    res.json({ uploadUrl, publicUrl });
+    return res.json({
+      key,
+      uploadUrl,
+      publicUrl,
+      maxBytes: MAX_BYTES,
+    });
   } catch (err) {
-    console.error("R2 sign-upload error:", err);
-    res.status(500).json({ error: "Failed to sign upload URL" });
+    console.error("❌ R2 sign-upload error:", err);
+    return res
+      .status(500)
+      .json({ error: "Failed to create signed upload URL" });
   }
 });
 
