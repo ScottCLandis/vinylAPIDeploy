@@ -4,7 +4,7 @@ var router = express.Router();
 const { PutObjectCommand } = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 const crypto = require("crypto");
-const { r2 } = require("../r2Client");
+const { r2 } = require("./r2Client");
 
 // ---- CONFIG ----
 const MAX_BYTES = 5 * 1024 * 1024; // 5MB
