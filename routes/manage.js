@@ -6,10 +6,10 @@ const mysql = require("mysql");
 const bodyParser = require("body-parser");
 
 var dbConn = mysql.createConnection({
-  host: "mysql.app.scottclandis.com",
-  user: "scottclandis",
-  password: "Gordan24",
-  database: "vinyl_collection",
+  host: process.env.host,
+  user: process.env.user,
+  password: process.env.password,
+  database: process.env.database,
 });
 
 router.post("/", function (req, res, next) {
